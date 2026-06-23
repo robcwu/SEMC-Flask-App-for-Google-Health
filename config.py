@@ -5,6 +5,9 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
     FITBIT_CLIENT_ID = os.environ.get('FITBIT_CLIENT_ID')
     FITBIT_CLIENT_SECRET = os.environ.get('FITBIT_CLIENT_SECRET')
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+    GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI") or "http://localhost:5000/oauth-redirect"
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
     SSL_DISABLE = False
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
