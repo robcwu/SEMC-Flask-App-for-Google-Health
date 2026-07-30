@@ -168,6 +168,7 @@ Do not commit real client secrets to GitHub.
 ---
 
 ### Windows Conda
+No quotes when setting!
 
 ```conda
 :: %CONDA_PREFIX%\etc\conda\activate.d\env_vars.bat
