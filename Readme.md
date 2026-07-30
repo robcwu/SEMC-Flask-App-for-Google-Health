@@ -61,7 +61,7 @@ git clone <repo-url>
 cd SEMC-Flask-App-for-Google-Health
 ```
 
-Create and activate a virtual environment.
+Create and activate a virtual environment - Windows powershell or Conda
 
 ### Windows PowerShell
 
@@ -88,56 +88,6 @@ Do not manually upgrade Flask, Werkzeug, or Flask-WTF unless the code has been t
 
 ---
 
-## Recommended `requirements.txt`
-
-Use this dependency set:
-
-```txt
-Flask==1.1.4
-Flask-SQLAlchemy==2.5.1
-Flask-WTF==0.15.1
-Flask-Bootstrap==3.3.7.1
-Flask-Script==2.0.6
-
-SQLAlchemy==1.3.24
-Werkzeug==0.16.1
-Jinja2==2.11.3
-MarkupSafe==1.1.1
-itsdangerous==1.1.0
-WTForms==2.3.3
-
-requests==2.31.0
-google-auth==2.29.0
-google-auth-oauthlib==1.2.0
-
-python-dateutil==2.8.2
-six==1.16.0
-```
-
----
-
-## Required code update for Flask-WTF
-
-In `app/__init__.py`, use:
-
-```python
-from flask_wtf.csrf import CSRFProtect
-```
-
-and:
-
-```python
-csrf = CSRFProtect()
-```
-
-Do not use the older import:
-
-```python
-from flask_wtf.csrf import CsrfProtect
-csrf = CsrfProtect()
-```
-
----
 
 ## Google Cloud setup
 
@@ -166,14 +116,14 @@ Set the app to testing mode and add the study Google accounts as test users.
 Example test users:
 
 ```text
-user1.514040723@gmail.com
-user2.514040723@gmail.com
-user3.514040723@gmail.com
+user1@gmail.com
+user2@gmail.com
+user3@gmail.com
 ...
-user12.514040723@gmail.com
+user12@gmail.com
 ```
 
-Add the following OAuth scopes:
+Add the following OAuth scopes under Data Access
 
 ```text
 https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly
@@ -278,13 +228,13 @@ To authorize a user, open the app with a `state` query parameter equal to the us
 Example:
 
 ```text
-http://localhost:5000/?state=user1.514040723%40gmail.com
+http://localhost:5000/?state=user1%40gmail.com
 ```
 
 Then sign into the matching Google account:
 
 ```text
-user1.514040723@gmail.com
+user1@gmail.com
 ```
 
 After authorization, check the list of stored users:
@@ -314,7 +264,7 @@ http://localhost:5000/google-data/<username>/<data_type>
 Example:
 
 ```text
-http://localhost:5000/google-data/user1.514040723%40gmail.com/heart-rate
+http://localhost:5000/google-data/user1%40gmail.com/heart-rate
 ```
 
 Supported data types include:
@@ -342,13 +292,13 @@ The username email must be URL-encoded.
 Example:
 
 ```text
-user1.514040723@gmail.com
+user1@gmail.com
 ```
 
 becomes:
 
 ```text
-user1.514040723%40gmail.com
+user1%40gmail.com
 ```
 
 Supported export metrics:
@@ -366,19 +316,19 @@ active-zone-minutes
 Example heart-rate export:
 
 ```text
-http://localhost:5000/export/user1.514040723%40gmail.com/heart-rate?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
+http://localhost:5000/export/user1%40gmail.com/heart-rate?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
 ```
 
 Example steps export:
 
 ```text
-http://localhost:5000/export/user1.514040723%40gmail.com/steps?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
+http://localhost:5000/export/user1%40gmail.com/steps?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
 ```
 
 Example sleep summary export:
 
 ```text
-http://localhost:5000/export/user1.514040723%40gmail.com/sleep-summary?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
+http://localhost:5000/export/user1%40gmail.com/sleep-summary?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
 ```
 
 ---
@@ -415,12 +365,12 @@ The participant window file should look like:
 
 ```csv
 sef_id,email,start_utc,end_utc
-SEF-01,user1.514040723@gmail.com,2026-05-26T20:00:00Z,2026-05-27T21:00:00Z
-SEF-02,user2.514040723@gmail.com,2026-06-02T21:00:00Z,2026-06-03T21:00:00Z
-SEF-03,user3.514040723@gmail.com,2026-06-10T21:00:00Z,2026-06-11T21:00:00Z
-SEF-10,user10.514040723@gmail.com,2026-07-02T19:00:00Z,2026-07-03T22:00:00Z
-SEF-11,user11.514040723@gmail.com,2026-07-08T20:00:00Z,2026-07-09T22:00:00Z
-SEF-12,user12.514040723@gmail.com,2026-07-09T20:00:00Z,2026-07-10T21:00:00Z
+SEF-01,user1@gmail.com,2026-05-26T20:00:00Z,2026-05-27T21:00:00Z
+SEF-02,user2@gmail.com,2026-06-02T21:00:00Z,2026-06-03T21:00:00Z
+SEF-03,user3@gmail.com,2026-06-10T21:00:00Z,2026-06-11T21:00:00Z
+SEF-10,user10@gmail.com,2026-07-02T19:00:00Z,2026-07-03T22:00:00Z
+SEF-11,user11@gmail.com,2026-07-08T20:00:00Z,2026-07-09T22:00:00Z
+SEF-12,user12@gmail.com,2026-07-09T20:00:00Z,2026-07-10T21:00:00Z
 ```
 
 To run the analysis, keep Flask running in one terminal:
@@ -471,33 +421,6 @@ SEF-10_sleep_stage_duration.png
 
 ## Common errors and fixes
 
-### `ModuleNotFoundError: No module named 'flask_sqlalchemy'`
-
-Dependencies are missing. Run:
-
-```powershell
-python -m pip install -r requirements.txt
-```
-
----
-
-### `ImportError: cannot import name 'CsrfProtect'`
-
-Use the newer Flask-WTF import.
-
-In `app/__init__.py`, use:
-
-```python
-from flask_wtf.csrf import CSRFProtect
-```
-
-and:
-
-```python
-csrf = CSRFProtect()
-```
-
----
 
 ### `sqlite3.OperationalError: no such table: fitbit_tokens`
 
