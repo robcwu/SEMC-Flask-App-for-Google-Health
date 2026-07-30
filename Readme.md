@@ -182,7 +182,7 @@ This name is inherited from the original Fitbit app, but the table now stores Go
 The first time you run the app on a new device, create the database tables:
 
 ```powershell
-python -c "from app import create_app, db; from config import get_current_config; app = create_app(get_current_config()); app.app_context().push(); db.create_all(); print('database created')"
+python manage.py createdb
 ```
 
 You should see:
