@@ -1,87 +1,595 @@
-#Fitbit OAuth Server app for GIMWearables project
+# SEMC Flask App for Google Health Data Extraction
 
-This is a skeleton app to save authorization tokens for multiple devices and then expose the fitbit API (using python-fitbit) to grab data. 
-It is written in Python 3.5 and based on code from https://github.com/Bachmann1234/FitbitFlaskTemplate
+This Flask app is a local OAuth and data-extraction server for the SEMC wearable study. It authorizes multiple Google/Fitbit-linked user accounts, stores Google OAuth tokens locally, and exposes Google Health API data through local CSV export routes.
 
-To install, clone this repo somewhere, and create a virtual environment (I am using conda):
-```
-# Create a virtual environment for 
-conda create --name <yourenv> python==3.5 pip
-conda activate <yourenv>
-pip install -r requirements.txt
-```
-*Currently need git.exe installed to get a more recent copy of python-fitbit* can work on different library later
+This app was adapted from the original Fitbit OAuth server used for the GIMWearables project. The original app used the Fitbit Web API and `python-fitbit`; this version uses the Google Health API.
 
-Then go to the [Fitbit App Config](https://dev.fitbit.com/apps/new), use Server mode with Callback URL http://localhost:5000/oauth-redirect. Note that the account must be approved for 'Intraday' data for non-personal devices in order to work like this in server mode.
+---
 
-Once you have that you need to define some environment variables. I am running Windows so I made the following batch script and included it as part of the conda environment activation script:
+## What this app does
 
-```
-:: %CONDA_PREFIX%\etc\conda\activate.d\env_vars.bat
-set FITBIT_CLIENT_ID=<your_client_id>
-set FITBIT_CLIENT_SECRET=<your_secret_key>
-set SECRET_KEY=sdasdas
-set FLASK_CONFIG=development
-```
+The app allows you to:
 
-Only development mode has been tested so far - works fine as a local application. 
+1. Authorize multiple Google accounts connected to Fitbit/Google Health data.
+2. Store each user's OAuth access and refresh tokens in a local SQLite database.
+3. Export wearable metrics as CSV files through local browser links.
+4. Pull heart rate, resting heart rate, steps, sleep episodes, sleep stages, and sleep summaries.
+5. Run a separate analysis script to summarize data across SEF participants.
 
-After defining those you are ready to setup development.
+This app is intended to run locally only.
 
-The app stores usernames and tokens in an sqlite database. This is by no means secure and is not meant to be deployed to the web.
+**Do not deploy this app publicly.**
 
-The OAuth scopes are defined in fitbit.py. This app requests all persmissions.
+---
 
-The first time you run the app you need to create the database. With your virtual environment activated run
-```
-python manage.py createdb
-```
+## Important security note
 
-Finally to run the app simply make sure your virtual environment is active and run
+This app stores OAuth tokens in a local SQLite database. This setup is not intended to be secure for web deployment.
 
-```
-python manage.py
- * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
- * Restarting with stat
- * Debugger is active!
- * Debugger pin code: 129-285-482
+Do not commit any of the following to GitHub:
+
+```text
+Google client secrets
+.env files
+SQLite databases
+CSV exports
+analysis outputs
 ```
 
-Authenticate users on the index page
+If a Google client secret has ever been pasted into chat, email, GitHub, or shared documentation, regenerate the secret in Google Cloud before continuing.
 
+---
+
+## Recommended Python version
+
+This app has been tested with:
+
+```text
+Python 3.8.10
+```
+
+Python 3.8 or 3.9 is recommended for this older Flask codebase.
+
+---
+
+## Installation
+
+Clone the repo:
+
+```bash
+git clone <repo-url>
+cd SEMC-Flask-App-for-Google-Health
+```
+
+Create and activate a virtual environment.
+
+### Windows PowerShell
+
+```powershell
+python -m venv venv1
+.\venv1\Scripts\Activate.ps1
+```
+
+### Conda option
+
+```bash
+conda create --name semc_google_health python=3.8 pip
+conda activate semc_google_health
+```
+
+Install dependencies:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Do not manually upgrade Flask, Werkzeug, or Flask-WTF unless the code has been tested with those versions. This app depends on an older Flask stack, and unpinned upgrades can break the app.
+
+---
+
+## Recommended `requirements.txt`
+
+Use this dependency set:
+
+```txt
+Flask==1.1.4
+Flask-SQLAlchemy==2.5.1
+Flask-WTF==0.15.1
+Flask-Bootstrap==3.3.7.1
+Flask-Script==2.0.6
+
+SQLAlchemy==1.3.24
+Werkzeug==0.16.1
+Jinja2==2.11.3
+MarkupSafe==1.1.1
+itsdangerous==1.1.0
+WTForms==2.3.3
+
+requests==2.31.0
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+
+python-dateutil==2.8.2
+six==1.16.0
+```
+
+---
+
+## Required code update for Flask-WTF
+
+In `app/__init__.py`, use:
+
+```python
+from flask_wtf.csrf import CSRFProtect
+```
+
+and:
+
+```python
+csrf = CSRFProtect()
+```
+
+Do not use the older import:
+
+```python
+from flask_wtf.csrf import CsrfProtect
+csrf = CsrfProtect()
+```
+
+---
+
+## Google Cloud setup
+
+Create or use a Google Cloud project with the Google Health API enabled.
+
+In Google Cloud Console:
+
+```text
+APIs & Services
+→ Library
+→ Google Health API
+→ Enable
+```
+
+Then configure OAuth.
+
+Go to:
+
+```text
+APIs & Services
+→ OAuth consent screen / Google Auth Platform
+```
+
+Set the app to testing mode and add the study Google accounts as test users.
+
+Example test users:
+
+```text
+user1.514040723@gmail.com
+user2.514040723@gmail.com
+user3.514040723@gmail.com
+...
+user12.514040723@gmail.com
+```
+
+Add the following OAuth scopes:
+
+```text
+https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly
+https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly
+https://www.googleapis.com/auth/googlehealth.sleep.readonly
+```
+
+Create an OAuth 2.0 Web Application client.
+
+Use these Authorized JavaScript origins:
+
+```text
 http://localhost:5000
-
-Access the data using an HTTP GET request (i.e. in the browser):
+http://127.0.0.1:5000
 ```
-http://localhost:5000/data/<username>/intraday/activities-heart/2019-06-13/1sec
+
+Use these Authorized redirect URIs:
+
+```text
+http://localhost:5000/oauth-redirect
+http://127.0.0.1:5000/oauth-redirect
 ```
-Where 'username' is either the email associated with the fitbit device, or the string 'all', which will cause a dump of data from all registered devices as a JSON dict. Only intraday activity for heartrate is currently setup.
 
-The idea is to have this flask server running on a local machine as an authentication layer for multiple accounts, and then use a separate process to send a daily request and log the data. The list of authenticated users is available at http://localhost:5000/users
+---
 
-	
-Intraday hr	http://localhost:5000/data/all/intraday/activities-heart/2025-10-17/1sec
+## Environment variables
 
-Intraday spo2	
-    http://localhost:5000/data/all/spo2/2025-10-17
-    https://api.fitbit.com/1/user/-/spo2/date/2025-06-11/all.json
-Intraday steps
-    https://api.fitbit.com/1/user/-/activities/steps/date/2025-10-17/1d/1min.json
-    http://localhost:5000/data/all/intraday/activities-steps/2025-10-17/1min
-Sleep 	
-    https://api.fitbit.com/1/user/-/sleep/date/2025-10-17.json
-    http://localhost:5000/data/all/sleep/2025-10-17
-Ecg list	
-    https://api.fitbit.com/1/user/-/ecg/list.json?afterDate=2025-10-14&sort=asc&limit=1&offset=0
-    http://localhost:5000/data/all/ecg/2025-10-16/asc
-hrv	
-    https://api.fitbit.com/1/user/-/hrv/date/2025-06-11/all.json
-    http://localhost:5000/data/all/hrv/2025-10-17
-    http://localhost:5000/data/all/hrv/2025-06-11
-br	
-    https://api.fitbit.com/1/user/-/br/date/2025-06-11/all.json
+Before running the app, set these environment variables.
 
-    http://localhost:5000/data/all/br/2025-10-17
-    http://localhost:5000/data/all/br/2025-06-11
+### Windows PowerShell
 
+```powershell
+$env:GOOGLE_CLIENT_ID="PASTE_CLIENT_ID_HERE"
+$env:GOOGLE_CLIENT_SECRET="PASTE_CLIENT_SECRET_HERE"
+$env:GOOGLE_REDIRECT_URI="http://localhost:5000/oauth-redirect"
+$env:SECRET_KEY="testsecret123"
+$env:FLASK_CONFIG="development"
+```
 
+Do not commit real client secrets to GitHub.
+
+---
+
+## Create the local database
+
+The app stores user tokens in SQLite.
+
+The table is still called:
+
+```text
+fitbit_tokens
+```
+
+This name is inherited from the original Fitbit app, but the table now stores Google Health OAuth tokens.
+
+The first time you run the app on a new device, create the database tables:
+
+```powershell
+python -c "from app import create_app, db; from config import get_current_config; app = create_app(get_current_config()); app.app_context().push(); db.create_all(); print('database created')"
+```
+
+You should see:
+
+```text
+database created
+```
+
+---
+
+## Run the Flask app
+
+With your virtual environment activated and environment variables set, run:
+
+```powershell
+python manage.py
+```
+
+You should see something like:
+
+```text
+Running on http://127.0.0.1:5000/
+```
+
+Open:
+
+```text
+http://127.0.0.1:5000/
+```
+
+or:
+
+```text
+http://localhost:5000/
+```
+
+---
+
+## Authorize users
+
+To authorize a user, open the app with a `state` query parameter equal to the user's email.
+
+Example:
+
+```text
+http://localhost:5000/?state=user1.514040723%40gmail.com
+```
+
+Then sign into the matching Google account:
+
+```text
+user1.514040723@gmail.com
+```
+
+After authorization, check the list of stored users:
+
+```text
+http://localhost:5000/users
+```
+
+A new local database starts empty, so `/users` may initially show:
+
+```json
+[]
+```
+
+That is normal until accounts are authorized.
+
+---
+
+## Available raw data route
+
+To inspect raw Google Health API data for one user:
+
+```text
+http://localhost:5000/google-data/<username>/<data_type>
+```
+
+Example:
+
+```text
+http://localhost:5000/google-data/user1.514040723%40gmail.com/heart-rate
+```
+
+Supported data types include:
+
+```text
+heart-rate
+daily-resting-heart-rate
+steps
+sleep
+active-zone-minutes
+```
+
+---
+
+## CSV export routes
+
+CSV exports use this format:
+
+```text
+http://localhost:5000/export/<username>/<metric>?start=<UTC_START>&end=<UTC_END>
+```
+
+The username email must be URL-encoded.
+
+Example:
+
+```text
+user1.514040723@gmail.com
+```
+
+becomes:
+
+```text
+user1.514040723%40gmail.com
+```
+
+Supported export metrics:
+
+```text
+heart-rate
+daily-resting-heart-rate
+steps
+sleep
+sleep-stages
+sleep-summary
+active-zone-minutes
+```
+
+Example heart-rate export:
+
+```text
+http://localhost:5000/export/user1.514040723%40gmail.com/heart-rate?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
+```
+
+Example steps export:
+
+```text
+http://localhost:5000/export/user1.514040723%40gmail.com/steps?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
+```
+
+Example sleep summary export:
+
+```text
+http://localhost:5000/export/user1.514040723%40gmail.com/sleep-summary?start=2026-06-29T20:00:00Z&end=2026-06-30T22:00:00Z
+```
+
+---
+
+## Time zones
+
+The app expects `start` and `end` times in UTC.
+
+For Toronto during June/July, local time is usually EDT, which is UTC-4.
+
+Example:
+
+```text
+June 29, 2026 4:00 PM Toronto = 2026-06-29T20:00:00Z
+June 30, 2026 6:00 PM Toronto = 2026-06-30T22:00:00Z
+```
+
+---
+
+## Analysis script
+
+The repo includes an analysis script for summarizing data across SEF participants.
+
+Expected structure:
+
+```text
+analysis/
+├── analyze_sef_data.py
+├── participant_windows.csv
+└── output/
+```
+
+The participant window file should look like:
+
+```csv
+sef_id,email,start_utc,end_utc
+SEF-01,user1.514040723@gmail.com,2026-05-26T20:00:00Z,2026-05-27T21:00:00Z
+SEF-02,user2.514040723@gmail.com,2026-06-02T21:00:00Z,2026-06-03T21:00:00Z
+SEF-03,user3.514040723@gmail.com,2026-06-10T21:00:00Z,2026-06-11T21:00:00Z
+SEF-10,user10.514040723@gmail.com,2026-07-02T19:00:00Z,2026-07-03T22:00:00Z
+SEF-11,user11.514040723@gmail.com,2026-07-08T20:00:00Z,2026-07-09T22:00:00Z
+SEF-12,user12.514040723@gmail.com,2026-07-09T20:00:00Z,2026-07-10T21:00:00Z
+```
+
+To run the analysis, keep Flask running in one terminal:
+
+```powershell
+python manage.py
+```
+
+Then open a second terminal and run:
+
+```powershell
+python analysis\analyze_sef_data.py
+```
+
+The analysis creates:
+
+```text
+analysis/output/master_summary.csv
+analysis/output/raw_exports/
+analysis/output/plots/
+```
+
+The master summary includes metrics such as:
+
+```text
+HR sample count
+mean HR
+median HR
+HR standard deviation
+total steps
+sleep episode count
+minutes asleep
+minutes awake
+sleep efficiency
+missing data notes
+download errors
+```
+
+The plots folder includes participant-level figures such as:
+
+```text
+SEF-10_heart_rate_timeseries.png
+SEF-10_steps_per_hour.png
+SEF-10_sleep_stage_duration.png
+```
+
+---
+
+## Common errors and fixes
+
+### `ModuleNotFoundError: No module named 'flask_sqlalchemy'`
+
+Dependencies are missing. Run:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+---
+
+### `ImportError: cannot import name 'CsrfProtect'`
+
+Use the newer Flask-WTF import.
+
+In `app/__init__.py`, use:
+
+```python
+from flask_wtf.csrf import CSRFProtect
+```
+
+and:
+
+```python
+csrf = CSRFProtect()
+```
+
+---
+
+### `sqlite3.OperationalError: no such table: fitbit_tokens`
+
+The database tables have not been created yet.
+
+Run:
+
+```powershell
+python -c "from app import create_app, db; from config import get_current_config; app = create_app(get_current_config()); app.app_context().push(); db.create_all(); print('database created')"
+```
+
+---
+
+### Google access blocked / app has not completed verification
+
+The app is in testing mode and the account has not been added as a test user.
+
+Fix:
+
+```text
+Google Cloud Console
+→ OAuth consent screen / Google Auth Platform
+→ Audience
+→ Test users
+→ Add the account email
+```
+
+---
+
+### `invalid_grant`, `Token has been expired or revoked`, or `unauthorized_client`
+
+The stored token is no longer valid or was created under a different Google OAuth client.
+
+Fix:
+
+1. Confirm the correct `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are being used.
+2. Add the user as a test user in that Google Cloud project.
+3. Reauthorize the user through the app.
+4. If needed, delete the local SQLite database and create a fresh one.
+
+---
+
+### Empty CSV with only headers
+
+The export route worked, but no matching data was found.
+
+Check raw data first:
+
+```text
+http://localhost:5000/google-data/<username>/sleep
+```
+
+Then try the export without a date filter:
+
+```text
+http://localhost:5000/export/<username>/sleep
+```
+
+If raw data is empty, the issue is likely Google Health/Fitbit sync, account authorization, or unavailable data for that metric.
+
+---
+
+## Git ignore recommendations
+
+Add this to `.gitignore`:
+
+```gitignore
+.env
+*.sqlite
+data-dev.sqlite
+data-test.sqlite
+__pycache__/
+*.pyc
+analysis/output/
+*.csv
+.idea/
+.vscode/
+```
+
+---
+
+## Legacy naming notes
+
+This app still contains some old Fitbit naming from the original project, including:
+
+```text
+fitbit_tokens
+save_fitbit_token
+get_user_fitbit_credentials
+get_all_fitbit_credentials
+```
+
+These names are legacy names. In the current app, they are used to store and retrieve Google Health OAuth tokens.
+
+Renaming them would make the code cleaner, but it is not required for the current local workflow.

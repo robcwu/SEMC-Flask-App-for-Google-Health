@@ -1,9 +1,9 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf.csrf import CsrfProtect
+from flask_wtf.csrf import CSRFProtect
 
 db = SQLAlchemy()
-csrf = CsrfProtect()
+csrf = CSRFProtect()
 
 
 def create_app(config):
