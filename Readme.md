@@ -167,6 +167,21 @@ Do not commit real client secrets to GitHub.
 
 ---
 
+### Windows Conda
+
+```conda
+:: %CONDA_PREFIX%\etc\conda\activate.d\env_vars.bat
+set GOOGLE_CLIENT_ID=PASTE_CLIENT_ID_HERE
+set GOOGLE_CLIENT_SECRET=PASTE_CLIENT_SECRET_HERE
+set GOOGLE_REDIRECT_URI=http://localhost:5000/oauth-redirect
+set SECRET_KEY=testsecret123
+set FLASK_CONFIG=development
+```
+
+
+---
+
+
 ## Create the local database
 
 The app stores user tokens in SQLite.
