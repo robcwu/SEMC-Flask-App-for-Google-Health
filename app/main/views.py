@@ -680,3 +680,149 @@ def export_sleep_summary(username):
             ])
 
     return make_csv_response(output, "sleep_summary.csv")
+
+@main.route("/export/<username>/daily-heart-rate-variability", methods=["GET"])
+def export_hrv(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "date",
+        "daily_rmssd",
+        "deep_rmssd",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        data = list_data_points(cred, "daily-heart-rate-variability")
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            hrv_data = point.get("daily-heart-rate-variability", {})
+            data_date = hrv_data.get("date", {})
+
+            if not google_date_in_window(data_date, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                format_google_date(data_date),
+                hrv_data.get("dailyRmssd"),
+                hrv_data.get("deepRmssd"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "daily-heart-rate-variability.csv")
+
+
+@main.route("/export/<username>/daily-respiratory-rate", methods=["GET"])
+def export_respiratory_rate(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "date",
+        "breathing_rate",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        data = list_data_points(cred, "daily-respiratory-rate")
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            # Try common keys for breathing rate
+            resp_data = point.get("daily-respiratory-rate", {})
+            data_date = resp_data.get("date", {})
+
+            if not google_date_in_window(data_date, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                format_google_date(data_date),
+                resp_data.get("value") or resp_data.get("averageValue"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "daily-respiratory-rate.csv")
+
+
+@main.route("/export/<username>/core-body-temperature", methods=["GET"])
+def export_temperature(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "date",
+        "temperature_value",
+        "temperature_type",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        # Often registered as body-temperature or skin-temperature
+        data = list_data_points(cred, "core-body-temperature") 
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            temp_data = point.get("core-body-temperature", {})
+            data_date = temp_data.get("date", {})
+
+            if not google_date_in_window(data_date, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                format_google_date(data_date),
+                temp_data.get("value"),
+                temp_data.get("type", "unknown"), # e.g., 'core' vs 'skin'
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "core-body-temperature.csv")
