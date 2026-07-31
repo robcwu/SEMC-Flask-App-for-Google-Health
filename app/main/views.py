@@ -291,6 +291,57 @@ def export_heart_rate(username):
 
     return make_csv_response(output, "heart_rate.csv")
 
+@main.route("/export/<username>/oxygen-saturation", methods=["GET"])
+def export_oxygen_saturation(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "sample_time_utc",
+        "utc_offset",
+        "local_date",
+        "local_time",
+        "oxygenSaturation",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        data = list_data_points(cred, "oxygen-saturation")
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            temp_data = point.get("oxygenSaturation", {})
+            sample_time =  temp_data.get("sampleTime", {})
+
+            sample_time_utc = sample_time.get("physicalTime")
+
+            if not timestamp_in_window(sample_time_utc, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                sample_time_utc,
+                sample_time.get("utcOffset"),
+                temp_data.get("percentage"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "oxygen-saturation.csv")
 
 @main.route("/export/<username>/daily-resting-heart-rate", methods=["GET"])
 def export_daily_resting_heart_rate(username):
@@ -887,3 +938,435 @@ def export_sleep_temperature(username):
             ])
 
     return make_csv_response(output, "daily-sleep-temperature-derivations.csv")
+
+
+@main.route("/export/<username>/altitude", methods=["GET"])
+def export_altitude(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "start_time_utc",
+        "end_time_utc",
+        "start_utc_offset",
+        "end_utc_offset",
+        "gainMillimeters",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        data = list_data_points(cred, "altitude")
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            altitude = point.get("altitude", {})
+            interval = altitude.get("interval", {})
+
+            start_time_utc = interval.get("startTime")
+            end_time_utc = interval.get("endTime")
+
+            if not interval_overlaps_window(start_time_utc, end_time_utc, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                start_time_utc,
+                end_time_utc,
+                interval.get("startUtcOffset"),
+                interval.get("endUtcOffset"),
+                altitude.get("gainMillimeters"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "altitude.csv")
+
+
+@main.route("/export/<username>/activity-level", methods=["GET"])
+def export_activity_level(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "start_time_utc",
+        "end_time_utc",
+        "start_utc_offset",
+        "end_utc_offset",
+        "activityLevelType",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        data = list_data_points(cred, "activity-level")
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            exercise = point.get("activityLevel", {})
+            interval = exercise.get("interval", {})
+
+            start_time_utc = interval.get("startTime")
+            end_time_utc = interval.get("endTime")
+
+            if not interval_overlaps_window(start_time_utc, end_time_utc, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                start_time_utc,
+                end_time_utc,
+                interval.get("startUtcOffset"),
+                interval.get("endUtcOffset"),
+                exercise.get("activityLevelType"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "activity-level.csv")
+
+@main.route("/export/<username>/distance", methods=["GET"])
+def export_distance(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "start_time_utc",
+        "end_time_utc",
+        "start_utc_offset",
+        "end_utc_offset",
+        "millimeters",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        data = list_data_points(cred, "distance")
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            distance = point.get("distance", {})
+            interval = distance.get("interval", {})
+
+            start_time_utc = interval.get("startTime")
+            end_time_utc = interval.get("endTime")
+
+            if not interval_overlaps_window(start_time_utc, end_time_utc, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                start_time_utc,
+                end_time_utc,
+                interval.get("startUtcOffset"),
+                interval.get("endUtcOffset"),
+                distance.get("millimeters"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "distance.csv")
+
+
+@main.route("/export/<username>/exercise", methods=["GET"])
+def export_exercise(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "start_time_utc",
+        "end_time_utc",
+        "start_utc_offset",
+        "end_utc_offset",
+        "activeDuration",
+        "createTime",
+        "exerciseType",
+        "activeZoneMinutes",        
+        "averageHeartRateBeatsPerMinute",  
+        "caloriesKcal",
+        "lightTime",
+        "moderateTime",
+        "peakTime",
+        "vigorousTime",       
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        data = list_data_points(cred, "exercise")
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            exercise = point.get("exercise", {})
+            interval = exercise.get("interval", {})
+            metricsSummary = exercise.get("metricsSummary", {})
+            heartRateZoneDurations = metricsSummary.get("heartRateZoneDurations", {})
+            start_time_utc = interval.get("startTime")
+            end_time_utc = interval.get("endTime")
+
+            if not interval_overlaps_window(start_time_utc, end_time_utc, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                start_time_utc,
+                end_time_utc,
+                interval.get("startUtcOffset"),
+                interval.get("endUtcOffset"),
+                exercise.get("activeDuration"),
+                exercise.get("createTime"),
+                exercise.get("exerciseType"),
+                metricsSummary.get("activeZoneMinutes"),                
+                metricsSummary.get("averageHeartRateBeatsPerMinute"),                     
+                metricsSummary.get("caloriesKcal"),
+                heartRateZoneDurations.get("lightTime"),
+                heartRateZoneDurations.get("moderateTime"),
+                heartRateZoneDurations.get("peakTime"),
+                heartRateZoneDurations.get("vigorousTime"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "exercise.csv")
+
+
+
+
+@main.route("/export/<username>/daily-oxygen-saturation", methods=["GET"])
+def export_daily_oxygen_saturation(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "date",
+        "averagePercentage",
+        "lowerBoundPercentage",
+        "standardDeviationPercentage",
+        "upperBoundPercentage",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        # Often registered as body-temperature or skin-temperature
+        data = list_data_points(cred, "daily-oxygen-saturation") 
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            temp_data = point.get("dailyOxygenSaturation", {})
+            data_date = temp_data.get("date", {})
+
+            if not google_date_in_window(data_date, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                format_google_date(data_date),
+                temp_data.get("averagePercentage"),
+                temp_data.get("lowerBoundPercentage"),
+                temp_data.get("standardDeviationPercentage"),
+                temp_data.get("upperBoundPercentage"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "daily-oxygen-saturation.csv")
+
+@main.route("/export/<username>/respiratory-rate-sleep-summary", methods=["GET"])
+def export_respiratory_rate_sleep_summary(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "date",
+        "date_offset",
+        "deepSleepStats_breathsPerMinute",
+        "deepSleepStats_signalToNoise",
+        "deepSleepStats_standardDeviation",
+        "fullSleepStats_breathsPerMinute",
+        "fullSleepStats_signalToNoise",
+        "fullSleepStats_standardDeviation",
+        "lightSleepStats_breathsPerMinute",
+        "lightSleepStats_signalToNoise",
+        "lightSleepStats_standardDeviation",
+        "remSleepStats_breathsPerMinute",
+        "remSleepStats_signalToNoise",
+        "remSleepStats_standardDeviation",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        # Often registered as body-temperature or skin-temperature
+        data = list_data_points(cred, "respiratory-rate-sleep-summary") 
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            temp_data = point.get("respiratoryRateSleepSummary", {})
+            sample_time = temp_data.get("sampleTime", {})         
+            sample_time_utc = sample_time.get("physicalTime")
+            if not timestamp_in_window(sample_time_utc, start_window, end_window):
+                continue         
+            
+            deepSleepStats = temp_data.get("deepSleepStats", {}) 
+            fullSleepStats = temp_data.get("fullSleepStats", {}) 
+            lightSleepStats = temp_data.get("lightSleepStats", {}) 
+            remSleepStats = temp_data.get("remSleepStats", {}) 
+            
+            writer.writerow([
+                cred.user_id,
+                sample_time_utc,
+                sample_time.get("utcOffset"),
+                deepSleepStats.get("breathsPerMinute"),
+                deepSleepStats.get("signalToNoise"),
+                deepSleepStats.get("standardDeviation"),
+                fullSleepStats.get("breathsPerMinute"),
+                fullSleepStats.get("signalToNoise"),
+                fullSleepStats.get("standardDeviation"),
+                lightSleepStats.get("breathsPerMinute"),
+                lightSleepStats.get("signalToNoise"),
+                lightSleepStats.get("standardDeviation"),
+                remSleepStats.get("breathsPerMinute"),
+                remSleepStats.get("signalToNoise"),
+                remSleepStats.get("standardDeviation"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "respiratory-rate-sleep-summary.csv")
+
+
+@main.route("/export/<username>/sedentary-period", methods=["GET"])
+def export_sedentar_period(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "start_time_utc",
+        "end_time_utc",
+        "start_utc_offset",
+        "end_utc_offset",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        data = list_data_points(cred, "sedentary-period")
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            steps = point.get("sedentaryPeriod", {})
+            interval = steps.get("interval", {})
+
+            start_time_utc = interval.get("startTime")
+            end_time_utc = interval.get("endTime")
+
+            if not interval_overlaps_window(start_time_utc, end_time_utc, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                start_time_utc,
+                end_time_utc,
+                interval.get("startUtcOffset"),
+                interval.get("endUtcOffset"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "sedentary-period.csv")
+
+
+
+
