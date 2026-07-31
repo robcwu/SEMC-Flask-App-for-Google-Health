@@ -13,6 +13,9 @@ SCOPES = [
     "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly",
     "https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly",
     "https://www.googleapis.com/auth/googlehealth.sleep.readonly",
+    "https://www.googleapis.com/auth/googlehealth.irn.readonly",
+    "https://www.googleapis.com/auth/googlehealth.ecg.readonly",
+    "https://www.googleapis.com/auth/googlehealth.location.readonly",
 ]
 
 

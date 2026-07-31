@@ -1,3 +1,7 @@
+""" July 30-31 - adding new data points
+
+"""
+
 import csv
 import io
 import json
@@ -14,6 +18,7 @@ from app.main import main
 from app.main.forms import DeviceUserForm
 from app.models import get_user_fitbit_credentials, get_all_fitbit_credentials
 from app.google_health_client import get_permission_screen_url, do_google_auth, list_data_points
+
 
 
 @main.route("/", methods=["GET", "POST"])
@@ -696,8 +701,10 @@ def export_hrv(username):
     writer.writerow([
         "user_id",
         "date",
-        "daily_rmssd",
-        "deep_rmssd",
+        "averageHeartRateVariabilityMilliseconds",
+        "deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds",
+        "entropy",
+        "nonRemHeartRateBeatsPerMinute",        
         "device",
         "platform",
         "recording_method"
@@ -711,7 +718,7 @@ def export_hrv(username):
             data_source = point.get("dataSource", {})
             device = data_source.get("device", {})
 
-            hrv_data = point.get("daily-heart-rate-variability", {})
+            hrv_data = point.get("dailyHeartRateVariability", {})
             data_date = hrv_data.get("date", {})
 
             if not google_date_in_window(data_date, start_window, end_window):
@@ -720,8 +727,10 @@ def export_hrv(username):
             writer.writerow([
                 cred.user_id,
                 format_google_date(data_date),
-                hrv_data.get("dailyRmssd"),
-                hrv_data.get("deepRmssd"),
+                hrv_data.get("averageHeartRateVariabilityMilliseconds"),
+                hrv_data.get("deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds"),
+                hrv_data.get("entropy"),
+                hrv_data.get("nonRemHeartRateBeatsPerMinute"),
                 device.get("displayName"),
                 data_source.get("platform"),
                 data_source.get("recordingMethod")
@@ -745,7 +754,7 @@ def export_respiratory_rate(username):
     writer.writerow([
         "user_id",
         "date",
-        "breathing_rate",
+        "breathsPerMinute",
         "device",
         "platform",
         "recording_method"
@@ -760,7 +769,7 @@ def export_respiratory_rate(username):
             device = data_source.get("device", {})
 
             # Try common keys for breathing rate
-            resp_data = point.get("daily-respiratory-rate", {})
+            resp_data = point.get("dailyRespiratoryRate", {})
             data_date = resp_data.get("date", {})
 
             if not google_date_in_window(data_date, start_window, end_window):
@@ -769,7 +778,7 @@ def export_respiratory_rate(username):
             writer.writerow([
                 cred.user_id,
                 format_google_date(data_date),
-                resp_data.get("value") or resp_data.get("averageValue"),
+                resp_data.get("breathsPerMinute"),
                 device.get("displayName"),
                 data_source.get("platform"),
                 data_source.get("recordingMethod")
@@ -777,7 +786,7 @@ def export_respiratory_rate(username):
 
     return make_csv_response(output, "daily-respiratory-rate.csv")
 
-
+#does not work - but no core temp with Sense2 so not working on it
 @main.route("/export/<username>/core-body-temperature", methods=["GET"])
 def export_temperature(username):
     creds, error = get_credentials_for_export(username)
@@ -826,3 +835,55 @@ def export_temperature(username):
             ])
 
     return make_csv_response(output, "core-body-temperature.csv")
+
+
+@main.route("/export/<username>/daily-sleep-temperature-derivations", methods=["GET"])
+def export_sleep_temperature(username):
+    creds, error = get_credentials_for_export(username)
+
+    if error:
+        return error, 404
+
+    start_window, end_window = get_export_window()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "user_id",
+        "date",
+        "nightlyTemperatureCelsius",
+        "baselineTemperatureCelsius",
+        "relativeNightlyStddev30dCelsius",
+        "device",
+        "platform",
+        "recording_method"
+    ])
+
+    for cred in creds:
+        # Often registered as body-temperature or skin-temperature
+        data = list_data_points(cred, "daily-sleep-temperature-derivations") 
+        data_points = data.get("dataPoints", [])
+
+        for point in data_points:
+            data_source = point.get("dataSource", {})
+            device = data_source.get("device", {})
+
+            temp_data = point.get("dailySleepTemperatureDerivations", {})
+            data_date = temp_data.get("date", {})
+
+            if not google_date_in_window(data_date, start_window, end_window):
+                continue
+
+            writer.writerow([
+                cred.user_id,
+                format_google_date(data_date),
+                temp_data.get("nightlyTemperatureCelsius"),
+                temp_data.get("baselineTemperatureCelsius"),
+                temp_data.get("relativeNightlyStddev30dCelsius"),
+                device.get("displayName"),
+                data_source.get("platform"),
+                data_source.get("recordingMethod")
+            ])
+
+    return make_csv_response(output, "daily-sleep-temperature-derivations.csv")
