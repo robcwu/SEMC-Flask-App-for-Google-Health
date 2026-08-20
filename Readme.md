@@ -269,6 +269,17 @@ That is normal until accounts are authorized.
 
 ---
 
+
+## Delete users
+
+
+To remove a user:
+
+```text
+http://localhost:5000/users/<user_id>/delete
+```
+
+
 ## Available raw data route
 
 To inspect raw Google Health API data for one user:

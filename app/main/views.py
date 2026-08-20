@@ -15,6 +15,7 @@ from flask import request
 from flask import url_for
 
 from app.main import main
+from app import db
 from app.main.forms import DeviceUserForm
 from app.models import get_user_fitbit_credentials, get_all_fitbit_credentials
 from app.google_health_client import get_permission_screen_url, do_google_auth, list_data_points
@@ -74,6 +75,39 @@ def handle_redirect():
 @main.route("/users", methods=["GET"])
 def get_users():
     return jsonify([cred.user_id for cred in get_all_fitbit_credentials()])
+
+
+@main.route('/users/<user_id>/delete', methods=['POST', 'DELETE','GET'])
+def delete_user(user_id):
+    """
+    Endpoint to remove a user's Fitbit credentials and delete them from the system.
+    """
+
+    cred = get_user_fitbit_credentials(user_id)
+    
+    if not cred:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.method == 'DELETE':
+            return jsonify({"error": "User not found"}), 404
+        return redirect(url_for('main.index'))
+
+    try:
+        # 2. Delete the record from the database session
+        db.session.delete(cred)
+        db.session.commit()
+        
+        # 3. Handle responses based on request type (AJAX vs Standard Form)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.method == 'DELETE':
+            return jsonify({"status": "success", "message": "User successfully removed."}), 200
+            
+        
+    except ValueError:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred while deleting user."}), 500        
+
+        
+    return redirect(url_for('main.index'))
+
+
 
 
 @main.route("/google-data/<username>/<data_type>", methods=["GET"])
